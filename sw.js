@@ -1,5 +1,5 @@
-const CACHE='taglio-mho-steel-paper-v7';
-const ASSETS=['./','./index.html','./comic.css','./icon.svg','./manifest.webmanifest','./icons/tile-180.png','./icons/tile-192.png','./icons/tile-512.png'];
+const CACHE='taglio-mho-workshop-v8';
+const ASSETS=['./','./index.html','./comic.css','./icon.svg','./manifest.webmanifest','./icons/tile-180.png','./icons/tile-192.png','./icons/tile-512.png','./cut-scene.svg','./profile-scene.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE&&(key.startsWith('taglio')||key.startsWith('Taglio'))).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{

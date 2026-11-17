@@ -1,0 +1,68 @@
+name: Applica e verifica restyling
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apply-restyling.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: recupero-restyling
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow PyYAML
+      - name: Esegui trasformazioni gia approvate senza attendere ambiente Pages
+        run: |
+          python - <<'PY'
+          import subprocess, yaml, re
+          from pathlib import Path
+          workflow = yaml.safe_load(Path('.github/workflows/restyling.yml').read_text())
+          steps = workflow['jobs']['refresh']['steps']
+          candidates = [s['run'] for s in steps if s.get('name') == 'Applica modifiche mirate e genera icone']
+          assert len(candidates) == 1
+          subprocess.run(['bash','-e','-c',candidates[0]], check=True)
+          html = Path('index.html').read_text()
+          assert 'Infopoint installazione e utilizzo' in html
+          assert 'Archivio conservato in dispositivo locale.' in html
+          assert 'Come usare e installare l’app' not in html
+          assert 'Archivio conservato in questo browser.' not in html
+          assert 'data:image/png;base64,' in Path('icon.svg').read_text()
+          assert 'visual-refresh-approved-v1' in Path('comic.css').read_text()
+          assert "KEY='cnc-taglio-articoli-v1'" in html and 'SIZES=[3000,6000]' in html
+          Path('/tmp/app-verified.js').write_text(re.search(r'<script>(.*?)</script>',html,re.S).group(1))
+          subprocess.run(['node','--check','/tmp/app-verified.js'],check=True)
+          PY
+      - name: Salva i file aggiornati
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html comic.css icon.svg sw.js icons/tile-180.png icons/tile-192.png icons/tile-512.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Applica e verifica logo, infopoint discreto e archivio locale'
+            git push origin HEAD:main
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  publish:
+    needs: apply
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Pubblica versione verificata
+        id: deployment
+        uses: actions/deploy-pages@v4

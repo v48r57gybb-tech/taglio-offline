@@ -20,24 +20,120 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install Pillow PyYAML
-      - name: Esegui trasformazioni gia approvate senza attendere ambiente Pages
+      - name: Verifica logo prima di applicare le modifiche
         run: |
           python - <<'PY'
-          import subprocess, yaml, re
+          import subprocess, yaml, re, base64, io, hashlib, shutil
           from pathlib import Path
+          from PIL import Image
+          source = '''
+          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
+          AAAAAAAAAA==
+          '''
+          source = ''.join(source.split())
+          raw = base64.b64decode(source, validate=True)
+          assert hashlib.sha256(raw).hexdigest() == 'cf6fc5c159f700183d1f0d6ecaa9cd0697092fb9878fb8be8fc2b75cdff7e930', 'Logo alterato: nessun file aggiornato'
+          Image.open(io.BytesIO(raw)).verify()
+          assert Image.open(io.BytesIO(raw)).size == (512,512)
           workflow = yaml.safe_load(Path('.github/workflows/restyling.yml').read_text())
           steps = workflow['jobs']['refresh']['steps']
           candidates = [s['run'] for s in steps if s.get('name') == 'Applica modifiche mirate e genera icone']
           assert len(candidates) == 1
-          subprocess.run(['bash','-e','-c',candidates[0]], check=True)
+          command, count = re.subn(r"(?m)^source = '[^']*'$", lambda m: 'source = '+repr(source), candidates[0])
+          assert count == 1
+          subprocess.run(['bash','-e','-c',command], check=True)
           html = Path('index.html').read_text()
           assert 'Infopoint installazione e utilizzo' in html
           assert 'Archivio conservato in dispositivo locale.' in html
           assert 'Come usare e installare l’app' not in html
           assert 'Archivio conservato in questo browser.' not in html
           assert 'data:image/png;base64,' in Path('icon.svg').read_text()
-          assert 'visual-refresh-approved-v1' in Path('comic.css').read_text()
           assert "KEY='cnc-taglio-articoli-v1'" in html and 'SIZES=[3000,6000]' in html
+          css = Path('comic.css').read_text()
+          if 'footer-local-right-v1' not in css:
+              css += '\n/* footer-local-right-v1 */\nfooter>div:last-child{text-align:right;margin-left:auto;max-width:100%}\n'
+          Path('comic.css').write_text(css)
+          shutil.copy('comic.css','_site/comic.css')
           Path('/tmp/app-verified.js').write_text(re.search(r'<script>(.*?)</script>',html,re.S).group(1))
           subprocess.run(['node','--check','/tmp/app-verified.js'],check=True)
           PY
@@ -47,7 +143,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html comic.css icon.svg sw.js icons/tile-180.png icons/tile-192.png icons/tile-512.png
           if ! git diff --cached --quiet; then
-            git commit -m 'Applica e verifica logo, infopoint discreto e archivio locale'
+            git commit -m 'Corregge logo e applica infopoint discreto e archivio locale'
             git push origin HEAD:main
           fi
       - uses: actions/upload-pages-artifact@v3

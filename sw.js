@@ -1,4 +1,4 @@
-const CACHE='taglio-mho-comic-v4';
+const CACHE='taglio-mho-visual-v5';
 const ASSETS=['./','./index.html','./comic.css','./icon.svg','./manifest.webmanifest','./icons/tile-180.png','./icons/tile-192.png','./icons/tile-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE&&(key.startsWith('taglio')||key.startsWith('Taglio'))).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});

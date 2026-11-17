@@ -1,0 +1,115 @@
+name: Restyling app e pubblicazione
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/restyling.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: restyling-pages
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow
+      - name: Applica modifiche mirate e genera icone
+        run: |
+          python - <<'PY'
+          import base64, io, re, shutil, subprocess
+          from pathlib import Path
+          from collections import deque
+          from PIL import Image
+          source = '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'
+          page = Path('index.html')
+          html = page.read_text()
+          marker = '/* visual-refresh-approved-v1 */'
+          if marker not in Path('comic.css').read_text():
+              actual = subprocess.check_output(['git','hash-object','index.html'], text=True).strip()
+              assert actual == '02b51b2300c0146d83614f93debee4c81cc9ef4c', 'index.html modificato: interrompo per evitare sovrascritture'
+              def replace(old, new):
+                  global html
+                  assert html.count(old) == 1, old
+                  html = html.replace(old, new, 1)
+              toolbar = '<div class="toolbar"><button id="install" hidden type="button">INSTALLA APP</button></div>'
+              replace(toolbar, '')
+              replace('<details class="help"><summary>Come usare e installare l’app</summary>', '<details class="help infopoint"><summary><span aria-hidden="true">ⓘ </span>Infopoint installazione e utilizzo</summary>' + toolbar)
+              replace('Archivio conservato in questo browser.', 'Archivio conservato in dispositivo locale.')
+              replace('>COPIA MAIL</button>', '>Copia mail</button>')
+              replace('>APRI EMAIL</a>', '>Apri email</a>')
+              replace('<details class="fold" id="preview">', '<p id="actionStatus" class="action-status" hidden></p><details class="fold" id="preview">')
+              replace('function toast(s){clearTimeout(timer);', 'function toast(s){const inline=$("actionStatus");if(inline){inline.hidden=!/^(Articolo salvato|Mail copiata)/.test(s);inline.textContent=inline.hidden?"":"✓ "+s;}clearTimeout(timer);')
+              replace("same?'Articolo salvato'", "same?'✓ Articolo salvato'")
+              replace("function markDirty(){if(current){", "function markDirty(){document.querySelectorAll('[aria-invalid]').forEach(el=>{el.removeAttribute('aria-invalid');el.removeAttribute('aria-describedby')});$('actionStatus').hidden=true;if(current){")
+              replace("current=null;$(id).focus()", "current=null;$(id).setAttribute('aria-invalid','true');$(id).setAttribute('aria-describedby','error');$(id).focus()")
+              assert "KEY='cnc-taglio-articoli-v1'" in html and 'SIZES=[3000,6000]' in html
+              script = re.search(r'<script>(.*?)</script>', html, re.S).group(1)
+              Path('/tmp/app-check.js').write_text(script)
+              subprocess.run(['node','--check','/tmp/app-check.js'], check=True)
+              css = '''
+          /* visual-refresh-approved-v1 */
+          :root{--ink:#17252d;--muted:#dfe9ef;--line:#17252d}
+          body{background-color:#f2f4f3;background-image:linear-gradient(#314c5f09 1px,transparent 1px),linear-gradient(90deg,#314c5f09 1px,transparent 1px);color:#17252d}
+          main{max-width:820px;padding-top:28px}.layout{grid-template-columns:minmax(0,1fr);gap:24px}.brand img{width:96px;height:96px;border-radius:0}.brand h1{letter-spacing:-.8px}.brand .eyebrow{color:#4b667b}header>p{font-size:15px;color:#405968}
+          .card{border-width:2px;border-radius:12px;box-shadow:3px 4px 0 #17252d;padding:26px}#inputPanel{background:#fafbf8;color:#17252d}#inputPanel .eyebrow{color:#405968}#inputPanel p,#inputPanel .help p{color:#40515c}#inputPanel summary{color:#405968}#inputPanel .help{border-color:#c5d1d6}#inputPanel .hint{color:#40515c}
+          label{margin-top:20px;font-weight:700}input,select{min-height:54px;background:white;border-color:#6a7d88;box-shadow:none;border-radius:7px;font-variant-numeric:tabular-nums}input[aria-invalid=true],select[aria-invalid=true]{border:2px solid #a32236;background:#fff5f6}button,.button{min-height:48px;border-radius:7px;box-shadow:2px 3px 0 #17252d;font-size:14px;font-weight:750}.primary{background:#ffe04c;color:#17252d}.quiet{min-height:46px;font-size:13px}.wide{margin-top:24px}
+          header details.help.infopoint{border:0;border-radius:0;background:transparent;padding:0;margin:10px 0 0;box-shadow:none}header .infopoint>summary{display:list-item;width:fit-content;max-width:100%;padding:12px 0;font-size:13px;font-weight:500;color:#405968}header .infopoint p{font-size:13px;max-width:68ch;color:#40515c}header .infopoint .toolbar{margin:6px 0 14px}#install{background:#e6edf0;font-size:13px;box-shadow:none}
+          #result{background:#4b667b;color:white}#result p{color:#f1f6f8}.article-row{border-color:#b5c7d266}.article-row>span{font-size:13px;letter-spacing:.5px}.headline{color:white;text-shadow:none;font-size:clamp(32px,6vw,46px);line-height:1.15;margin:14px 0 26px}#result h3{color:#fff;font-size:13px;letter-spacing:.7px}#intro{margin-bottom:0;font-size:15px}.line{align-items:baseline;gap:20px}.line strong,.offcut strong{font-variant-numeric:tabular-nums}.offcut{background:#f1f5f4;color:#17252d;border:1px solid #17252d;border-left:5px solid #c6d1d8;padding:15px}.offcut strong{color:#17252d}.actions{gap:12px}#copy{background:#ffe04c;color:#17252d}#email{background:#e6edf0;color:#17252d}#result .action-status{color:#fff;background:#185b45;border:1px solid #b9e2cf;border-radius:6px;font-size:13px;padding:10px 12px}.fold{border-top:1px solid #b5c7d266}.fold summary{min-height:48px;display:list-item}.back{box-shadow:none}#save:disabled{background:#d8efdf;color:#164630;opacity:1;box-shadow:none}
+          .archive{background:#fafbf8;color:#17252d;border-width:1px;box-shadow:none}.archive>summary,.archive .help summary{color:#263f50}.archive .hint,.archive p,.archive th{color:#40515c}.archive .help{border-color:#c5d1d6}.archive tr{background:transparent}.archive td,.archive th{border-color:#d5dee1}.archive td[data-label]:before{color:#40515c}footer{font-size:11px;border-top:1px solid #c5d1d6;color:#405968}footer strong{font-size:13px}input:focus,select:focus{outline-color:#315d7b}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #244d69;outline-offset:4px}#result button:focus-visible,#result a:focus-visible,#result summary:focus-visible{outline-color:#ffe04c}#toast{background:#e1f2e8;color:#164630;box-shadow:2px 3px 0 #17252d;font-size:14px}
+          @media(max-width:700px){main{padding:20px 16px 26px}.brand{gap:12px}.brand img{width:78px;height:78px}.brand h1{font-size:26px}.card{padding:20px;box-shadow:2px 3px 0 #17252d}.headline{font-size:34px}.article-row{align-items:flex-start}.actions{flex-direction:column}.archive tr{border:1px solid #c5d1d6;background:white}.archive td button{min-height:46px}footer{gap:14px}}
+          @media(max-width:360px){.brand img{width:64px;height:64px}.brand h1{font-size:23px}.card{padding:16px}.line{gap:10px;font-size:14px}}
+          @media print{#inputPanel,header,.archive,.actions,.back,#save,footer,#toast,.action-status{display:none!important}#result{background:white;color:black;border:1px solid black;box-shadow:none}#result h3,#result p,.headline{color:black}.offcut{background:white;color:black}.offcut strong{color:black}}
+          '''
+              page.write_text(html)
+              with Path('comic.css').open('a') as f: f.write(css)
+              sw = Path('sw.js').read_text()
+              assert 'taglio-mho-comic-v4' in sw
+              Path('sw.js').write_text(sw.replace('taglio-mho-comic-v4','taglio-mho-visual-v5'))
+          image = Image.open(io.BytesIO(base64.b64decode(source, validate=True))).convert('RGBA')
+          assert image.size == (512,512)
+          px = image.load(); seen = set(); queue = deque([(0,0)])
+          while queue:
+              x,y = queue.popleft()
+              if not (0 <= x < 512 and 0 <= y < 512) or (x,y) in seen: continue
+              seen.add((x,y)); rgb = px[x,y][:3]
+              if max(rgb)>30 or max(rgb)-min(rgb)>10: continue
+              px[x,y] = (*rgb,0)
+              queue.extend(((x-1,y),(x+1,y),(x,y-1),(x,y+1)))
+          output = io.BytesIO(); image.save(output, format='PNG', optimize=True)
+          png = base64.b64encode(output.getvalue()).decode()
+          Path('icon.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><image width="512" height="512" href="data:image/png;base64,'+png+'"/></svg>')
+          Path('icons').mkdir(exist_ok=True)
+          for size in (180,192,512):
+              tile = Image.new('RGBA',(512,512),'#263F50'); tile.alpha_composite(image)
+              tile.convert('RGB').resize((size,size),Image.Resampling.LANCZOS).save(f'icons/tile-{size}.png',optimize=True)
+          deploy = Path('_site'); deploy.mkdir(exist_ok=True)
+          for name in ('index.html','comic.css','icon.svg','manifest.webmanifest','sw.js'): shutil.copy(name,deploy/name)
+          shutil.copytree('icons',deploy/'icons',dirs_exist_ok=True)
+          for file in deploy.rglob('*'):
+              if file.is_file(): assert file.stat().st_size>0
+          PY
+      - name: Salva restyling e icone nel repository
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html comic.css icon.svg sw.js icons/tile-180.png icons/tile-192.png icons/tile-512.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Applica logo approvato, layout chiaro e infopoint discreto'
+            git push origin HEAD:main
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Pubblica su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
